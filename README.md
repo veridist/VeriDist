@@ -15,6 +15,7 @@ bash setup.sh
 ## Run matrix multiplication example
 ```
 cd build/
-make master-workers ../small_platform.xml ../master-workers_d.xml
+make master-workers
+./master-workers ../small_platform.xml ../master-workers_d.xml
 ```
 

@@ -15,15 +15,16 @@ make
 sudo make install
 
 echo "###################################### Cleaning up #####################################"
+cd ..
 rm -rf SimGrid-3.21/
 rm SimGrid-3.21.tar.gz
 
-cd -
 
 echo "###################################### Setting up VeriDist #####################################"
+cd VeriDist/
 mkdir build
 cd build
 cmake ..
 make
-cd -
+cd ..
 
