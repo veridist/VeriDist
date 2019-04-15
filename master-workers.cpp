@@ -6,9 +6,12 @@
 #include <fstream>
 #include <sstream>
 
+#include <iostream>
+
 XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_masterworker, "Messages specific for this s4u example");
 
 std::string const program_name = "mm_pure_arith";
+std::string const partial_files_dir = "partials/";
 
 std::string RunCmd(std::string cmd) {
     std::string data;
@@ -81,8 +84,11 @@ class Worker {
         auto intermediates = req->intermediates;
         auto pws_commands = req->pws_commands;
 
+        // std::cout << "PWS Commands : " << std::endl;
+        // std::cout << pws_commands << std::endl;
+
         std::ofstream v_file;
-        std::string v_filename = RandomString(32) + ".partial";
+        std::string v_filename = partial_files_dir +  RandomString(32) + ".partial";
         v_file.open(v_filename);
         for (auto &intermediate : intermediates) {
             v_file << intermediate << " ";
@@ -91,18 +97,22 @@ class Worker {
         v_file.close();
 
         std::ofstream pws_file;
-        std::string pws_filename = RandomString(32) + ".pws";
+        std::string pws_filename = partial_files_dir + RandomString(32) + ".pws";
         pws_file.open(pws_filename);
         pws_file.write(pws_commands.c_str(), pws_commands.size());
         pws_file.close();
-        
+
         std::string command = "./pepper_partial_prover_" + program_name + " " 
             + program_name + ".params "
-            + pws_filename
+            + pws_filename + " "
             + program_name + ".inputs "
             + v_filename;
 
+        std::cout << "Command : " << command << std::endl;
+
         auto result = RunCmd(command);
+
+        std::cout << "O/P : " << result << std::endl;
 
         worker_response* resp = new worker_response(std::vector<int>{}, std::vector<int>{}); 
         delete req;
@@ -115,34 +125,20 @@ class Worker {
 
 // Class containing master code
 class Master {
-    int matrix_dimension             = 0;
-    double communicate_cost          = 0;
+    double communicate_cost = 0;
     std::vector<simgrid::s4u::MailboxPtr> workers;
     std::mt19937 gen;
-
-    // Helper method to generate a matrix of integers
-    std::vector<std::vector<int>> generateMatrix() {
-        auto dist = std::uniform_int_distribution<int>(1,100);
-        std::vector<std::vector<int>> matrix(matrix_dimension, std::vector<int>(matrix_dimension));
-        for (int i = 0; i < matrix_dimension; i++) {
-            std::generate(matrix[i].begin(), matrix[i].end(), [&dist, &gen = this->gen]() { return dist(gen); });
-        }
-        return matrix;
-    }
 
     public:
     explicit Master(std::vector<std::string> args)
     {
-        xbt_assert(args.size() > 3, "The master function expects 2 arguments plus the workers' names");
+        xbt_assert(args.size() > 2, "The master function expects 2 arguments plus the workers' names");
 
-        matrix_dimension = std::stoi(args[1]);
-        communicate_cost = std::stod(args[2]);
+        communicate_cost = std::stod(args[1]);
         gen              = std::mt19937(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
-        for (unsigned int i = 3; i < args.size(); i++)
+        for (unsigned int i = 2; i < args.size(); i++)
             workers.push_back(simgrid::s4u::Mailbox::by_name(args[i]));
-
-        XBT_INFO("Got %zu workers and %ld tasks to process", workers.size(), matrix_dimension * matrix_dimension);
     }
 
     void operator()()
@@ -151,12 +147,8 @@ class Master {
         simgrid::s4u::MailboxPtr my_mailbox = simgrid::s4u::Mailbox::by_name(simgrid::s4u::this_actor::get_host()->get_name());
         my_mailbox->set_receiver(simgrid::s4u::Actor::self());
 
-        /* - Select a worker in a round-robin way */
         // int task_num = i * matrix_dimension + j;
         simgrid::s4u::MailboxPtr mailbox = workers[0];
-
-        /* - Send the computation amount to the worker */
-        // XBT_INFO("Sending row %d, col %d to mailbox '%s'", i, j, mailbox->get_cname());
 
         // Open PWS File
         auto pws_filename = program_name + ".pws";
@@ -176,17 +168,14 @@ class Master {
 
         XBT_INFO("Send request to worker..\n");
 
-        std::vector<std::vector<int>> product_matrix(matrix_dimension, std::vector<int>(matrix_dimension)); 
         // Get responses from workers
-        // for (int i = 0; i < tasks_count; i++) {
-            if (my_mailbox->ready()) {
-                worker_response* resp = static_cast<worker_response*>(my_mailbox->get());
-                auto input_output = resp->input_output;
-                auto intermediates = resp->intermediates;
-                XBT_INFO("Received response..\n");
-                delete resp;
-            }
-        // }
+        if (my_mailbox->ready()) {
+            worker_response* resp = static_cast<worker_response*>(my_mailbox->get());
+            auto input_output = resp->input_output;
+            auto intermediates = resp->intermediates;
+            XBT_INFO("Received response..\n");
+            delete resp;
+        }
     }
 };
 

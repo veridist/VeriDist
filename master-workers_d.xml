@@ -3,19 +3,18 @@
 <platform version="4.1">
   <!-- The master actor (with some arguments) -->
   <actor host="Tremblay" function="master">
-    <argument value="10"/>       <!-- Dimension of matrix -->
     <argument value="1000000"/>   <!-- Communication size of tasks -->
     <!-- name of hosts on which the workers are running -->
     <argument value="Jupiter" />
-    <argument value="Fafard" />
+    <!-- <argument value="Fafard" />
     <argument value="Ginette" />
-    <argument value="Bourassa" />
+    <argument value="Bourassa" /> -->
   </actor>
   <!-- The worker processes (with no argument) -->
   <actor host="Jupiter" function="worker">
       <argument value="Tremblay" />
   </actor>
-  <actor host="Fafard" function="worker">
+  <!-- <actor host="Fafard" function="worker">
       <argument value="Tremblay" />
   </actor>
   <actor host="Ginette" function="worker">
@@ -23,5 +22,5 @@
   </actor>
   <actor host="Bourassa" function="worker">
       <argument value="Tremblay" />
-  </actor>
+  </actor> -->
 </platform>
