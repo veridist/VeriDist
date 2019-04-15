@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include <iostream>
+#include <string>
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_masterworker, "Messages specific for this s4u example");
 
@@ -46,6 +47,34 @@ std::string RandomString(const std::string::size_type length) {
 	return s;
 }
 
+std::vector<std::string> split(const std::string &text, char delim)
+{
+    size_t pos = text.find(delim);
+    size_t initial_pos = 0;
+    auto strs = std::vector<std::string>{};
+
+    while(pos != -1) {
+        strs.push_back(text.substr(initial_pos, pos - initial_pos));
+        initial_pos = pos + 1;
+
+        pos = text.find(delim, initial_pos);
+    }
+
+    strs.push_back(text.substr(initial_pos, std::min(pos, text.size()) - initial_pos + 1));
+
+    return strs;
+}
+
+std::vector<int> convert_to_int(const std::vector<std::string> strings) {
+    auto ints = std::vector<int>{};
+    ints.reserve(strings.size());
+    for (auto const &str : strings) {
+        if (str.size() == 0) continue;
+        ints.push_back(stoi(str));
+    }
+
+    return ints;
+}
 
 struct worker_request {
     std::vector<int> intermediates;
@@ -84,9 +113,6 @@ class Worker {
         auto intermediates = req->intermediates;
         auto pws_commands = req->pws_commands;
 
-        // std::cout << "PWS Commands : " << std::endl;
-        // std::cout << pws_commands << std::endl;
-
         std::ofstream v_file;
         std::string v_filename = partial_files_dir +  RandomString(32) + ".partial";
         v_file.open(v_filename);
@@ -110,11 +136,25 @@ class Worker {
 
         std::cout << "Command : " << command << std::endl;
 
+        // Run the command and get the stdout into result
         auto result = RunCmd(command);
 
-        std::cout << "O/P : " << result << std::endl;
+        std::cout << "Result : " << result << "\n";
 
-        worker_response* resp = new worker_response(std::vector<int>{}, std::vector<int>{}); 
+        // Parse the two lines
+        auto io_and_v = split(result, '\n');
+        auto io_str = io_and_v[0];
+        auto v_str = io_and_v[1];
+
+        // Parse each line
+        auto io_list = split(io_str, ' ');
+        auto v_list = split(v_str, ' ');
+
+        // Convert to integer
+        auto io_vec = convert_to_int(io_list);
+        auto v_vec = convert_to_int(v_list);
+
+        worker_response* resp = new worker_response(io_vec, v_vec); 
         delete req;
 
         master_mailbox->put(resp, 1000000);
