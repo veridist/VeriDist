@@ -6,7 +6,7 @@
 #include <utils.h>
 
 struct NodeInfo {
-    int dependency_count;
+    std::vector<int> depends_on;
     std::vector<int> dependents;
 };
 
@@ -47,7 +47,7 @@ Graph generate_dag(std::vector<std::string> pws_commands) {
                     tok_to_stmt[number] = i;
 
                 } else {
-                    dag[i].dependency_count++;
+                    dag[i].depends_on.push_back(tok_to_stmt[number]);
                     dag[tok_to_stmt[number]].dependents.push_back(i);
                 }
                 
